@@ -1,53 +1,47 @@
 #!/usr/bin/python3
 """Log Parsing"""
-
+import dis
 import sys
 
-status_codes = {200, 301, 400, 401, 403, 404, 405, 500}
-filesize = 0
-statuscodeline = {}
 
-count_line = 0
+def display_metrics(totalsize, statuscode):
+    """Function that print the metrics"""
 
-
-def print_metrics():
-    """reads stdin line by line and computes metrics"""
-    print(f"Total file size: {filesize}")
-
-    for code in sorted(status_codes):
-        count = statuscodeline.get(code, 0)
-        if count > 0:
-            print(f"{code}: {count}")
-
-    print()
-    reset_metrics()
+    print('File size: {}'.format(totalsize))
+    for key, value in sorted(statuscode.items()):
+        if value != 0:
+            print('{}: {}'.format(key, value))
 
 
-def reset_metrics():
-    """Resets metrics"""
-    global filesize, statuscodeline
-    filesize = 0
-    statuscodeline = {}
+if __name__ == '__main__':
+    totalsize = 0
+    statuscode = {
+        '200': 0,
+        '301': 0,
+        '400': 0,
+        '401': 0,
+        '403': 0,
+        '404': 0,
+        '405': 0,
+        '500': 0
+    }
 
+    try:
+        i = 0
+        for line in sys.stdin:
+            args = line.split()
+            if len(args) > 6:
+                status = args[-2]
+                filesize = args[-1]
+                totalsize += int(filesize)
+                if status in statuscode:
+                    i += 1
+                    statuscode[status] += 1
+                    if i % 10 == 0:
+                        display_metrics(totalsize, statuscode)
 
-try:
-    for line in sys.stdin:
-        count_line += 1
-
-        parts = line.split()
-        if len(parts) != 10 or parts[5] != '"GET' or parts[6] != '/projects/260':
-            continue
-
-        status_code, file_size = int(parts[8]), int(parts[9])
-
-        filesize += file_size
-
-        if status_code in status_codes:
-            statuscodeline[status_code] = statuscodeline.get(
-                status_code, 0) + 1
-
-        if count_line % 10 == 0:
-            print_metrics()
-
-except KeyboardInterrupt:
-    print_metrics()
+    except KeyboardInterrupt:
+        display_metrics(totalsize, statuscode)
+        raise
+    else:
+        display_metrics(totalsize, statuscode)
