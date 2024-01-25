@@ -1,37 +1,41 @@
 #!/usr/bin/python3
-"""Log parsing"""
+"""Log Parsing"""
 
-import sys
+from sys import stdin
+import re
 
-if __name__ == '__main__':
 
-    filesize, count = 0, 0
-    codes = ["200", "301", "400", "401", "403", "404", "405", "500"]
-    stats = {k: 0 for k in codes}
+def valid_format(line):
+    """checks if the line have a valid format"""
+    pattern = r'^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) - '
+    r'\[([^\]]+)\] "GET \/projects\/260 HTTP\/1\.1" (\d{3}) (\d+)$'
+    match = re.match(pattern, line)
+    if match:
+        return True
+    return False
 
-    def print_stats(stats: dict, file_size: int) -> None:
-        print("File size: {:d}".format(filesize))
-        for k, v in sorted(stats.items()):
-            if v:
-                print("{}: {}".format(k, v))
 
-    try:
-        for line in sys.stdin:
-            count += 1
-            data = line.split()
-            try:
-                status_code = data[-2]
-                if status_code in stats:
-                    stats[status_code] += 1
-            except BaseException:
-                pass
-            try:
-                filesize += int(data[-1])
-            except BaseException:
-                pass
-            if count % 10 == 0:
-                print_stats(stats, filesize)
-        print_stats(stats, filesize)
-    except KeyboardInterrupt:
-        print_stats(stats, filesize)
-        raise
+try:
+    my_dict = {}
+    total_size = 0
+    for i, line in enumerate(stdin, start=1):
+        line = line.strip()
+        if not valid_format(line):
+            continue
+        parts = line.split(" ")
+        total_size += int(parts[-1])
+        if parts[-2] not in my_dict:
+            my_dict[parts[-2]] = 1
+        else:
+            my_dict[parts[-2]] += 1
+        my_dict = dict(sorted(my_dict.items()))
+        if i % 10 == 0:
+            print("File size: {}".format(total_size))
+            for key, val in my_dict.items():
+                print("{}: {}".format(key, val))
+except Exception as err:
+    pass
+finally:
+    print("File size: {}".format(total_size))
+    for key, val in my_dict.items():
+        print("{}: {}".format(key, val))
